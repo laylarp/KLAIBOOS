@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klaibooks - Livros Infantis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="theme-color" content="#FF6B8B">
+</head>
+<body>
+    <!-- Header com lista de desejos -->
+    <header>
+        <div class="header-container container">
+            <a href="#" class="logo">
+                <img src="logo.png" alt="Klaibooks Logo" class="logo-image">
+                <div class="logo-text">Klai<span>books</span></div>
+            </a>
+            
+            <div class="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="#inicio">Início</a></li>
+                <li><a href="#livros">Livros</a></li>
+                <li><a href="#bestsellers">Mais Vendidos</a></li>
+                <li><a href="#wishlist" id="wishlistLink">
+                    <i class="fas fa-heart"></i> Lista de Desejos
+                    <span class="wishlist-count">0</span>
+                </a></li>
+                <li><a href="#contactos">Contactos</a></li>
+            </ul>
+            
+            <div class="header-actions">
+                <div class="wishlist-icon" id="wishlistIcon">
+                    <i class="fas fa-heart"></i>
+                    <div class="wishlist-count">0</div>
+                </div>
+                <div class="cart-icon" id="cartIcon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <div class="cart-count">0</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Seção Hero (mantida igual) -->
+    <section class="hero" id="inicio">
+        <div class="container">
+            <h1>Livros Infantis que Inspiram Imaginação</h1>
+            <p>Descubra nossa coleção encantadora de livros infantis em PDF para imprimir e livros físicos com personalização na capa!</p>
+            <div class="hero-buttons">
+                <a href="#livros" class="cta-button primary-btn">Explorar Livros</a>
+                <a href="#bestsellers" class="cta-button secondary-btn">Ver Mais Vendidos</a>
+            </div>
+        </div>
+        <div class="hero-decoration">
+            <div class="decoration-circle"></div>
+            <div class="decoration-star"></div>
+            <div class="decoration-book"></div>
+        </div>
+    </section>
+
+    <!-- Estatísticas (mantida igual) -->
+    <section class="stats-section container">
+        <h2 class="section-title">Nossos Números</h2>
+        <p class="section-subtitle">Juntos estamos criando histórias inesquecíveis</p>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-number" id="booksSold">0</div>
+                <div class="stat-label">Livros Vendidos</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <div class="stat-number" id="totalViews">0</div>
+                <div class="stat-label">Visualizações</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-smile"></i>
+                </div>
+                <div class="stat-number" id="happyCustomers">0</div>
+                <div class="stat-label">Clientes Felizes</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filtros (mantido igual) -->
+    <section class="filters container" id="livros">
+        <h2 class="section-subtitle">Encontre seu livro perfeito</h2>
+        <div class="filter-container">
+            <button class="filter-btn active" data-filter="all">
+                <i class="fas fa-star"></i> Todos
+            </button>
+            <button class="filter-btn" data-filter="pdf">
+                <i class="fas fa-file-pdf"></i> PDF
+            </button>
+            <button class="filter-btn" data-filter="fisico">
+                <i class="fas fa-book"></i> Físicos
+            </button>
+            <button class="filter-btn" data-filter="populares">
+                <i class="fas fa-fire"></i> Populares
+            </button>
+            <button class="filter-btn" data-filter="promocao">
+                <i class="fas fa-tag"></i> Promoções
+            </button>
+        </div>
+    </section>
+
+    <!-- Livros - Grid com mais livros por linha -->
+    <section class="books-section">
+        <div class="container">
+            <h2 class="section-title">Nossa Coleção Encantadora</h2>
+            <p class="section-subtitle">Escolha entre livros em PDF para imprimir ou livros físicos personalizados</p>
+            
+            <div class="books-grid compact-grid" id="booksGrid">
+                <!-- Livros serão carregados via JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal de Opções do Livro -->
+    <div class="book-options-modal" id="bookOptionsModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeOptionsModal">&times;</button>
+            <div class="modal-body" id="modalBody">
+                <!-- Conteúdo será preenchido pelo JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Carrinho de Compras (atualizado com opções) -->
+    <div class="cart-overlay" id="cartOverlay">
+        <div class="cart-panel">
+            <div class="cart-header">
+                <h2 class="cart-title">
+                    <i class="fas fa-shopping-cart"></i> Seu Carrinho
+                </h2>
+                <button class="close-cart" id="closeCart">&times;</button>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <div class="empty-cart-message" id="emptyCartMessage">
+                    <i class="fas fa-book-open"></i>
+                    <p>Seu carrinho está vazio</p>
+                    <a href="#livros" class="cta-button secondary-btn">Ver Livros</a>
+                </div>
+            </div>
+            
+            <div class="cart-summary" id="cartSummary" style="display: none;">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">0 MT</span>
+                </div>
+                <div class="summary-row">
+                    <span>Frete:</span>
+                    <span id="shipping">0 MT</span>
+                </div>
+                <div class="summary-row summary-total">
+                    <span>Total:</span>
+                    <span id="total">0 MT</span>
+                </div>
+            </div>
+            
+            <div class="delivery-section" id="deliverySection" style="display: none;">
+                <h3><i class="fas fa-map-marker-alt"></i> Localização de Entrega</h3>
+                <div class="location-input">
+                    <input type="text" id="deliveryAddress" placeholder="Digite seu endereço completo (apenas para livros físicos)">
+                    <button class="location-btn" id="getLocationBtn">
+                        <i class="fas fa-location-crosshairs"></i>
+                    </button>
+                </div>
+                <div class="delivery-info">
+                    <!-- Conteúdo será preenchido pelo JavaScript -->
+                </div>
+                
+                <h3><i class="fas fa-user"></i> Suas Informações</h3>
+                <div class="customer-info">
+                    <input type="text" id="customerName" placeholder="Seu nome completo" class="customer-input" required>
+                    <input type="tel" id="customerPhone" placeholder="Seu telefone" class="customer-input">
+                    <input type="email" id="customerEmail" placeholder="Seu email (obrigatório para PDFs)" class="customer-input">
+                </div>
+            </div>
+            
+            <div class="checkout-options" id="checkoutOptions" style="display: none;">
+                <h3><i class="fas fa-paper-plane"></i> Finalizar Pedido</h3>
+                <p class="checkout-info">Escolha como deseja enviar seu pedido:</p>
+                
+                <div class="checkout-buttons">
+                    <button class="checkout-btn whatsapp-btn" id="whatsappBtn">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button class="checkout-btn sms-btn" id="smsBtn">
+                        <i class="fas fa-sms"></i> SMS
+                    </button>
+                    <button class="checkout-btn email-btn" id="emailBtn">
+                        <i class="fas fa-envelope"></i> Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal da Lista de Desejos -->
+    <div class="wishlist-overlay" id="wishlistOverlay">
+        <div class="wishlist-panel">
+            <div class="wishlist-header">
+                <h2 class="wishlist-title">
+                    <i class="fas fa-heart"></i> Minha Lista de Desejos
+                </h2>
+                <button class="close-wishlist" id="closeWishlist">&times;</button>
+            </div>
+            
+            <div class="wishlist-items" id="wishlistItems">
+                <div class="empty-wishlist-message" id="emptyWishlistMessage">
+                    <i class="fas fa-heart"></i>
+                    <p>Sua lista de desejos está vazia</p>
+                    <a href="#livros" class="cta-button secondary-btn">Ver Livros</a>
+                </div>
+            </div>
+            
+            <div class="wishlist-actions" id="wishlistActions" style="display: none;">
+                <button class="cta-button primary-btn" id="clearWishlist">
+                    <i class="fas fa-trash"></i> Limpar Lista
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer (mantido igual) -->
+    <footer id="contactos">
+        <div class="footer-container container">
+            <div class="footer-column">
+                <div class="logo">
+                    <img src="logo.png" alt="Klaibooks Logo" class="logo-image">
+                    <div class="logo-text">Klai<span>books</span></div>
+                </div>
+                <p class="footer-description">Especializados em livros infantis que inspiram imaginação e aprendizado.</p>
+                <div class="social-icons">
+                    <a href="#" class="social-icon"><i class="fab fa-whatsapp"></i></a>
+                    <a href="#" class="social-icon"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Contactos</h3>
+                <div class="contact-info">
+                    <i class="fas fa-phone"></i>
+                    <span>+258 855227420</span>
+                </div>
+                <div class="contact-info">
+                    <i class="fas fa-envelope"></i>
+                    <span>xwatche@gmail.com</span>
+                </div>
+                <div class="contact-info">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Maputo, Moçambique</span>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Links Rápidos</h3>
+                <ul class="footer-links">
+                    <li><a href="#inicio">Início</a></li>
+                    <li><a href="#livros">Livros</a></li>
+                    <li><a href="#bestsellers">Mais Vendidos</a></li>
+                    <li><a href="#wishlist">Lista de Desejos</a></li>
+                    <li><a href="#contactos">Contactos</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Métodos de Envio</h3>
+                <div class="payment-methods">
+                    <div class="method">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </div>
+                    <div class="method">
+                        <i class="fas fa-sms"></i>
+                        <span>SMS</span>
+                    </div>
+                    <div class="method">
+                        <i class="fas fa-envelope"></i>
+                        <span>Email</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="copyright container">
+            <p>&copy; 2026 klabooks. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="books-data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
