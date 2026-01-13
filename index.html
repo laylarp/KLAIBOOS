@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#FF6B8B">
 </head>
 <body>
-    <!-- Header com lista de desejos -->
+    <!-- Header -->
     <header>
         <div class="header-container container">
             <a href="#" class="logo">
@@ -26,14 +26,14 @@
                 <li><a href="#inicio">Início</a></li>
                 <li><a href="#livros">Livros</a></li>
                 <li><a href="#bestsellers">Mais Vendidos</a></li>
-                <li><a href="#wishlist" id="wishlistLink">
-                    <i class="fas fa-heart"></i> Lista de Desejos
-                    <span class="wishlist-count">0</span>
-                </a></li>
                 <li><a href="#contactos">Contactos</a></li>
             </ul>
             
             <div class="header-actions">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Pesquisar livros...">
+                    <button id="searchBtn"><i class="fas fa-search"></i></button>
+                </div>
                 <div class="wishlist-icon" id="wishlistIcon">
                     <i class="fas fa-heart"></i>
                     <div class="wishlist-count">0</div>
@@ -46,7 +46,7 @@
         </div>
     </header>
 
-    <!-- Seção Hero (mantida igual) -->
+    <!-- Hero Section -->
     <section class="hero" id="inicio">
         <div class="container">
             <h1>Livros Infantis que Inspiram Imaginação</h1>
@@ -63,41 +63,8 @@
         </div>
     </section>
 
-    <!-- Estatísticas (mantida igual) -->
-    <section class="stats-section container">
-        <h2 class="section-title">Nossos Números</h2>
-        <p class="section-subtitle">Juntos estamos criando histórias inesquecíveis</p>
-        
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-book"></i>
-                </div>
-                <div class="stat-number" id="booksSold">0</div>
-                <div class="stat-label">Livros Vendidos</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-eye"></i>
-                </div>
-                <div class="stat-number" id="totalViews">0</div>
-                <div class="stat-label">Visualizações</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-smile"></i>
-                </div>
-                <div class="stat-number" id="happyCustomers">0</div>
-                <div class="stat-label">Clientes Felizes</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Filtros (mantido igual) -->
+    <!-- Filtros -->
     <section class="filters container" id="livros">
-        <h2 class="section-subtitle">Encontre seu livro perfeito</h2>
         <div class="filter-container">
             <button class="filter-btn active" data-filter="all">
                 <i class="fas fa-star"></i> Todos
@@ -117,14 +84,65 @@
         </div>
     </section>
 
-    <!-- Livros - Grid com mais livros por linha -->
+    <!-- Livros -->
     <section class="books-section">
         <div class="container">
-            <h2 class="section-title">Nossa Coleção Encantadora</h2>
-            <p class="section-subtitle">Escolha entre livros em PDF para imprimir ou livros físicos personalizados</p>
+            <div class="section-header">
+                <h2 class="section-title">Nossa Coleção Encantadora</h2>
+                <p class="section-subtitle">Escolha entre livros em PDF para imprimir ou livros físicos personalizados</p>
+            </div>
             
-            <div class="books-grid compact-grid" id="booksGrid">
+            <div class="books-grid" id="booksGrid">
                 <!-- Livros serão carregados via JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Mais Vendidos -->
+    <section class="bestsellers-section" id="bestsellers">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">🔥 Mais Vendidos</h2>
+            </div>
+            
+            <div class="books-grid" id="bestsellersGrid">
+                <!-- Mais vendidos serão carregados via JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Info Section -->
+    <section class="info-section">
+        <div class="container">
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-shipping-fast"></i>
+                    </div>
+                    <h3>Entrega Grátis</h3>
+                    <p>Nas zonas de Mahotas, Costa de sol, Laulane, Albazine, T3, Zona verde, Benfica</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <h3>Capa Personalizada</h3>
+                    <p>Coloque o nome da criança na capa do livro físico</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-print"></i>
+                    </div>
+                    <h3>PDF para Imprimir</h3>
+                    <p>Formato A4 ou A5, pronto para imprimir em casa</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3>Suporte 24/7</h3>
+                    <p>Atendimento via WhatsApp, SMS ou Email</p>
+                </div>
             </div>
         </div>
     </section>
@@ -139,7 +157,7 @@
         </div>
     </div>
 
-    <!-- Carrinho de Compras (atualizado com opções) -->
+    <!-- Carrinho de Compras -->
     <div class="cart-overlay" id="cartOverlay">
         <div class="cart-panel">
             <div class="cart-header">
@@ -186,9 +204,10 @@
                 
                 <h3><i class="fas fa-user"></i> Suas Informações</h3>
                 <div class="customer-info">
-                    <input type="text" id="customerName" placeholder="Seu nome completo" class="customer-input" required>
-                    <input type="tel" id="customerPhone" placeholder="Seu telefone" class="customer-input">
-                    <input type="email" id="customerEmail" placeholder="Seu email (obrigatório para PDFs)" class="customer-input">
+                    <input type="text" id="customerName" placeholder="Seu nome completo *" class="customer-input" required>
+                    <input type="tel" id="customerPhone" placeholder="Seu telefone *" class="customer-input" required>
+                    <input type="email" id="customerEmail" placeholder="Seu email (opcional)" class="customer-input">
+                    <p class="field-note">* Campos obrigatórios. Email é opcional mas recomendado para PDFs.</p>
                 </div>
             </div>
             
@@ -237,7 +256,7 @@
         </div>
     </div>
 
-    <!-- Footer (mantido igual) -->
+    <!-- Footer -->
     <footer id="contactos">
         <div class="footer-container container">
             <div class="footer-column">
@@ -275,7 +294,6 @@
                     <li><a href="#inicio">Início</a></li>
                     <li><a href="#livros">Livros</a></li>
                     <li><a href="#bestsellers">Mais Vendidos</a></li>
-                    <li><a href="#wishlist">Lista de Desejos</a></li>
                     <li><a href="#contactos">Contactos</a></li>
                 </ul>
             </div>
@@ -300,7 +318,7 @@
         </div>
         
         <div class="copyright container">
-            <p>&copy; 2026 klabooks. Todos os direitos reservados.</p>
+            <p>&copy; 2026 klaibooks. Todos os direitos reservados.</p>
         </div>
     </footer>
 

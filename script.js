@@ -2,7 +2,6 @@
 let cart = [];
 let cartCount = 0;
 let salesData = {};
-let currentSort = 'popularidade';
 let currentFilter = 'all';
 let wishlist = [];
 
@@ -27,22 +26,33 @@ const whatsappBtn = document.getElementById('whatsappBtn');
 const smsBtn = document.getElementById('smsBtn');
 const emailBtn = document.getElementById('emailBtn');
 const filterBtns = document.querySelectorAll('.filter-btn');
-const sortBtns = document.querySelectorAll('.sort-btn');
 const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
 const navLinks = document.querySelector('.nav-links');
 const getLocationBtn = document.getElementById('getLocationBtn');
 const deliveryAddress = document.getElementById('deliveryAddress');
+const wishlistIcon = document.getElementById('wishlistIcon');
+const wishlistOverlay = document.getElementById('wishlistOverlay');
+const closeWishlist = document.getElementById('closeWishlist');
+const wishlistItems = document.getElementById('wishlistItems');
+const emptyWishlistMessage = document.getElementById('emptyWishlistMessage');
+const wishlistActions = document.getElementById('wishlistActions');
+const clearWishlistBtn = document.getElementById('clearWishlist');
+const bookOptionsModal = document.getElementById('bookOptionsModal');
+const closeOptionsModal = document.getElementById('closeOptionsModal');
+const modalBody = document.getElementById('modalBody');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
 
 // ========== FUNÇÕES DE INICIALIZAÇÃO ==========
 function initializeApp() {
     loadSalesData();
     loadWishlist();
     loadCartFromStorage();
-    renderBooks('all', 'popularidade');
-    renderBestsellers('mais-vendidos');
+    renderBooks('all');
+    renderBestsellers();
     setupEventListeners();
     updateCartCount();
-    updateStats();
+    updateWishlistCount();
 }
 
 // ========== FUNÇÕES DE DADOS ==========
@@ -51,7 +61,6 @@ function loadSalesData() {
     if (savedSalesData) {
         salesData = JSON.parse(savedSalesData);
     } else {
-        // Dados iniciais
         books.forEach(book => {
             salesData[book.id] = {
                 sales: book.popular ? Math.floor(Math.random() * 50) + 30 : Math.floor(Math.random() * 20) + 5,
@@ -76,6 +85,8 @@ function loadWishlist() {
 
 function saveWishlist() {
     localStorage.setItem('klaibooks_wishlist', JSON.stringify(wishlist));
+    updateWishlistCount();
+    renderWishlist();
 }
 
 function isInWishlist(bookId) {
@@ -87,20 +98,31 @@ function toggleWishlist(bookId) {
     if (index === -1) {
         wishlist.push(bookId);
         saveWishlist();
+        showNotification('Livro adicionado à lista de desejos!', 'success');
         return true;
     } else {
         wishlist.splice(index, 1);
         saveWishlist();
+        showNotification('Livro removido da lista de desejos', 'info');
         return false;
     }
 }
 
+function clearWishlist() {
+    if (wishlist.length === 0) return;
+    
+    if (confirm('Tem certeza que deseja limpar toda a lista de desejos?')) {
+        wishlist = [];
+        saveWishlist();
+        showNotification('Lista de desejos limpa', 'success');
+    }
+}
+
 // ========== FUNÇÕES DE RENDERIZAÇÃO ==========
-function renderBooks(filter, sortBy = 'popularidade') {
+function renderBooks(filter, searchQuery = '') {
     if (!booksGrid) return;
     
     booksGrid.innerHTML = '';
-    currentSort = sortBy;
     currentFilter = filter;
     
     let filteredBooks = [...books];
@@ -121,209 +143,380 @@ function renderBooks(filter, sortBy = 'popularidade') {
             break;
     }
     
-    // Aplicar ordenação
+    // Aplicar busca
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredBooks = filteredBooks.filter(book => 
+            book.title.toLowerCase().includes(query) ||
+            book.author.toLowerCase().includes(query) ||
+            book.category.toLowerCase().includes(query) ||
+            book.description.toLowerCase().includes(query)
+        );
+    }
+    
+    // Ordenar por popularidade
     filteredBooks.sort((a, b) => {
         const salesA = salesData[a.id]?.sales || 0;
         const salesB = salesData[b.id]?.sales || 0;
         const ratingA = salesData[a.id]?.rating || 4.0;
         const ratingB = salesData[b.id]?.rating || 4.0;
         
-        switch(sortBy) {
-            case 'popularidade':
-                const scoreA = salesA * 10 + ratingA * 100;
-                const scoreB = salesB * 10 + ratingB * 100;
-                return scoreB - scoreA;
-            case 'preco-crescente':
-                return a.price - b.price;
-            case 'preco-decrescente':
-                return b.price - a.price;
-            case 'mais-vendidos':
-                return salesB - salesA;
-            default:
-                return 0;
-        }
+        const scoreA = salesA * 10 + ratingA * 100;
+        const scoreB = salesB * 10 + ratingB * 100;
+        return scoreB - scoreA;
     });
     
     // Renderizar livros
+    if (filteredBooks.length === 0) {
+        booksGrid.innerHTML = `
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <p>Nenhum livro encontrado${searchQuery ? ` para "${searchQuery}"` : ''}</p>
+                ${searchQuery ? `<button class="cta-button secondary-btn" id="clearSearch">Limpar Busca</button>` : ''}
+            </div>
+        `;
+        
+        const clearSearchBtn = document.getElementById('clearSearch');
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                renderBooks(filter);
+            });
+        }
+        
+        return;
+    }
+    
     filteredBooks.forEach(book => {
-        const bookCard = createBookCard(book, false);
+        const bookCard = createBookCard(book);
         booksGrid.appendChild(bookCard);
         registerView(book.id);
     });
-    
-    updateSectionTitle(filter);
 }
 
-function renderBestsellers(sortBy = 'mais-vendidos') {
+function renderBestsellers() {
     if (!bestsellersGrid) return;
     
     bestsellersGrid.innerHTML = '';
     
     let bestsellers = [...books];
     
-    // Aplicar ordenação
+    // Ordenar por vendas
     bestsellers.sort((a, b) => {
         const salesA = salesData[a.id]?.sales || 0;
         const salesB = salesData[b.id]?.sales || 0;
-        
-        switch(sortBy) {
-            case 'mais-vendidos':
-                return salesB - salesA;
-            case 'popularidade':
-                return (salesB * 10) - (salesA * 10);
-            case 'preco-crescente':
-                return a.price - b.price;
-            case 'preco-decrescente':
-                return b.price - a.price;
-            default:
-                return salesB - salesA;
-        }
+        return salesB - salesA;
     });
     
-    // Pegar apenas os top 4
-    bestsellers = bestsellers.slice(0, 4);
+    // Pegar apenas os top 8
+    bestsellers = bestsellers.slice(0, 8);
     
     // Renderizar mais vendidos
     bestsellers.forEach((book, index) => {
-        const bookCard = createBookCard(book, true, index + 1);
+        const bookCard = createBookCard(book, index + 1);
         bestsellersGrid.appendChild(bookCard);
     });
 }
 
-function createBookCard(book, isBestseller = false, rank = null) {
+function createBookCard(book, rank = null) {
     const bookSales = salesData[book.id]?.sales || 0;
     const bookRating = salesData[book.id]?.rating || 4.0;
     const inWishlist = isInWishlist(book.id);
     const bookImage = bookImages[book.id] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80';
-    const isBestsellerBook = bookSales > 30;
     
     const bookCard = document.createElement('div');
     bookCard.className = 'book-card';
     bookCard.dataset.id = book.id;
     
-    // Badges dinâmicos
-    let badgesHTML = `
-        <div class="book-badges">
-            <div class="book-badge badge-${book.type}">
-                <i class="fas fa-${book.type === 'pdf' ? 'file-pdf' : 'book'}"></i>
-                ${book.type === 'pdf' ? 'PDF' : 'Físico'}
-            </div>
-    `;
-    
-    if (isBestsellerBook) {
-        badgesHTML += `
-            <div class="book-badge badge-bestseller">
-                <i class="fas fa-crown"></i> Mais Vendido
-            </div>
-        `;
+    let badgesHTML = '';
+    if (rank) {
+        badgesHTML += `<span class="book-badge rank">#${rank}</span>`;
     }
-    
     if (book.promotion) {
-        badgesHTML += `
-            <div class="book-badge badge-promo">
-                <i class="fas fa-tag"></i> Promoção
-            </div>
-        `;
+        badgesHTML += `<span class="book-badge promo">Promoção</span>`;
     }
-    
-    if (book.popular && !isBestsellerBook) {
-        badgesHTML += `
-            <div class="book-badge badge-new">
-                <i class="fas fa-star"></i> Popular
-            </div>
-        `;
+    if (book.popular) {
+        badgesHTML += `<span class="book-badge popular">Popular</span>`;
     }
-    
-    if (isBestseller && rank) {
-        badgesHTML += `
-            <div class="book-badge badge-rank">
-                <i class="fas fa-trophy"></i> Top ${rank}
-            </div>
-        `;
-    }
-    
-    badgesHTML += `</div>`;
     
     bookCard.innerHTML = `
         <div class="book-image-container">
             <img src="${bookImage}" alt="${book.title}" class="book-image" loading="lazy">
             ${badgesHTML}
-            <div class="book-overlay">
-                <button class="quick-view-btn" data-id="${book.id}">
-                    <i class="fas fa-eye"></i> Ver Detalhes
-                </button>
-            </div>
+            <button class="quick-view-btn" data-id="${book.id}">
+                <i class="fas fa-eye"></i>
+            </button>
         </div>
         
         <div class="book-content">
             <h3 class="book-title">${book.title}</h3>
             <p class="book-author">
-                <i class="fas fa-user-edit"></i> ${book.author}
+                <i class="fas fa-user"></i> ${book.author}
             </p>
             
-            <p class="book-description">${book.description}</p>
-            
             <div class="book-meta">
-                <span><i class="fas fa-file-alt"></i> ${book.pages} págs</span>
-                <span><i class="fas fa-globe"></i> ${book.language}</span>
+                <span><i class="fas fa-file"></i> ${book.pages}p</span>
                 <span><i class="fas fa-tag"></i> ${book.category}</span>
+                <span class="book-type ${book.type}">
+                    <i class="fas fa-${book.type === 'pdf' ? 'file-pdf' : 'book'}"></i>
+                    ${book.type === 'pdf' ? 'PDF' : 'Físico'}
+                </span>
             </div>
             
             <div class="book-rating">
                 <div class="stars">
                     ${getStarRating(bookRating)}
                 </div>
-                <span class="rating-count">(${bookSales} vendas)</span>
+                <span class="rating-text">${bookSales} vendas</span>
             </div>
             
-            <div class="book-price-section">
-                <div class="book-price">${book.price} <span>MT</span></div>
+            <div class="book-footer">
+                <div class="book-price">${book.price} MT</div>
                 <div class="book-actions">
                     <button class="wishlist-btn ${inWishlist ? 'active' : ''}" data-id="${book.id}">
                         <i class="fas fa-heart"></i>
                     </button>
                     <button class="add-to-cart" data-id="${book.id}">
-                        <i class="fas fa-cart-plus"></i> Comprar
+                        <i class="fas fa-cart-plus"></i>
                     </button>
                 </div>
             </div>
-            
-            ${book.type === 'pdf' ? 
-                `<p class="pdf-note"><i class="fas fa-download"></i> Download instantâneo - Sem frete</p>` 
-                : ''}
         </div>
     `;
     
     return bookCard;
 }
 
-function getStarRating(rating) {
-    let stars = '';
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
+function renderWishlist() {
+    if (!wishlistItems) return;
     
-    for (let i = 0; i < fullStars; i++) {
-        stars += '<i class="fas fa-star"></i>';
+    wishlistItems.innerHTML = '';
+    
+    if (wishlist.length === 0) {
+        emptyWishlistMessage.style.display = 'block';
+        wishlistActions.style.display = 'none';
+        return;
     }
     
-    if (hasHalfStar) {
-        stars += '<i class="fas fa-star-half-alt"></i>';
-    }
+    emptyWishlistMessage.style.display = 'none';
+    wishlistActions.style.display = 'block';
     
-    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-    for (let i = 0; i < emptyStars; i++) {
-        stars += '<i class="far fa-star"></i>';
-    }
+    wishlist.forEach(bookId => {
+        const book = books.find(b => b.id === bookId);
+        if (!book) return;
+        
+        const bookImage = bookImages[book.id] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80';
+        
+        const wishlistItem = document.createElement('div');
+        wishlistItem.className = 'wishlist-item';
+        wishlistItem.dataset.id = book.id;
+        
+        wishlistItem.innerHTML = `
+            <img src="${bookImage}" alt="${book.title}" class="wishlist-item-image">
+            <div class="wishlist-item-details">
+                <h4>${book.title}</h4>
+                <p class="wishlist-item-author">${book.author}</p>
+                <p class="wishlist-item-price">${book.price} MT</p>
+                <p class="wishlist-item-type ${book.type}">
+                    <i class="fas fa-${book.type === 'pdf' ? 'file-pdf' : 'book'}"></i>
+                    ${book.type === 'pdf' ? 'PDF' : 'Livro Físico'}
+                </p>
+            </div>
+            <div class="wishlist-item-actions">
+                <button class="move-to-cart" data-id="${book.id}">
+                    <i class="fas fa-cart-plus"></i>
+                </button>
+                <button class="remove-from-wishlist" data-id="${book.id}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        wishlistItems.appendChild(wishlistItem);
+    });
     
-    return stars;
+    // Adicionar eventos após renderizar
+    setTimeout(() => {
+        document.querySelectorAll('.remove-from-wishlist').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const bookId = parseInt(this.dataset.id);
+                toggleWishlist(bookId);
+            });
+        });
+        
+        document.querySelectorAll('.move-to-cart').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const bookId = parseInt(this.dataset.id);
+                showBookOptions(bookId);
+                wishlistOverlay.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            });
+        });
+    }, 100);
 }
 
-// ========== FUNÇÕES DE CARRINHO ==========
-function addToCart(bookId) {
+function showBookOptions(bookId) {
     const book = books.find(b => b.id === bookId);
     if (!book) return;
     
-    // Verificar se já existe PDF no carrinho (não pode misturar com físico)
+    const bookImage = bookImages[book.id] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80';
+    
+    let optionsHTML = '';
+    
+    if (book.type === 'pdf') {
+        optionsHTML = `
+            <div class="option-section">
+                <h3>${book.title}</h3>
+                <p class="option-subtitle">Escolha o formato do PDF</p>
+                
+                <div class="format-options">
+                    <div class="format-option">
+                        <input type="radio" id="format-a4" name="format" value="A4" checked>
+                        <label for="format-a4">
+                            <i class="fas fa-print"></i>
+                            <span>Formato A4</span>
+                            <small>Pronto para imprimir em casa</small>
+                        </label>
+                    </div>
+                    <div class="format-option">
+                        <input type="radio" id="format-a5" name="format" value="A5">
+                        <label for="format-a5">
+                            <i class="fas fa-print"></i>
+                            <span>Formato A5</span>
+                            <small>Tamanho reduzido</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        optionsHTML = `
+            <div class="option-section">
+                <h3>${book.title}</h3>
+                <p class="option-subtitle">Personalize seu livro físico</p>
+                
+                <div class="format-options">
+                    <div class="format-option">
+                        <input type="radio" id="format-comum" name="format" value="capa comum" checked>
+                        <label for="format-comum">
+                            <i class="fas fa-book"></i>
+                            <span>Capa Comum</span>
+                            <small>Capa padrão sem personalização</small>
+                        </label>
+                    </div>
+                    <div class="format-option">
+                        <input type="radio" id="format-personalizada" name="format" value="capa personalizada">
+                        <label for="format-personalizada">
+                            <i class="fas fa-gift"></i>
+                            <span>Capa Personalizada</span>
+                            <small>Com nome da criança (será impresso na capa)</small>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="personalization-section" id="personalizationSection" style="display: none;">
+                    <label for="childName">
+                        <i class="fas fa-user"></i> Nome da criança:
+                    </label>
+                    <input type="text" id="childName" placeholder="Digite o nome para a capa" maxlength="30">
+                    <small class="note">O nome será impresso na capa do livro</small>
+                </div>
+                
+                <div class="quantity-section">
+                    <label>Quantidade:</label>
+                    <select class="quantity-select" id="quantitySelect">
+                        <option value="1">1 unidade</option>
+                        <option value="2">2 unidades</option>
+                        <option value="3">3 unidades</option>
+                        <option value="4">4 unidades</option>
+                        <option value="5">5 unidades</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+    
+    modalBody.innerHTML = `
+        <div class="book-options-content">
+            <div class="book-options-image">
+                <img src="${bookImage}" alt="${book.title}">
+            </div>
+            ${optionsHTML}
+        </div>
+        <div class="book-options-footer">
+            <button class="cta-button secondary-btn cancel-options">Cancelar</button>
+            <button class="cta-button primary-btn add-with-options" data-id="${book.id}">
+                <i class="fas fa-cart-plus"></i> Adicionar ao Carrinho
+            </button>
+        </div>
+    `;
+    
+    bookOptionsModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Eventos do modal
+    closeOptionsModal.addEventListener('click', closeBookOptions);
+    
+    const cancelOptionsBtn = document.querySelector('.cancel-options');
+    if (cancelOptionsBtn) {
+        cancelOptionsBtn.addEventListener('click', closeBookOptions);
+    }
+    
+    const addWithOptionsBtn = document.querySelector('.add-with-options');
+    if (addWithOptionsBtn) {
+        addWithOptionsBtn.addEventListener('click', function() {
+            const bookId = parseInt(this.dataset.id);
+            addToCartWithOptions(bookId);
+        });
+    }
+    
+    // Mostrar/ocultar campo de personalização
+    const personalizadaRadio = document.getElementById('format-personalizada');
+    const comumRadio = document.getElementById('format-comum');
+    const personalizationSection = document.getElementById('personalizationSection');
+    
+    if (personalizadaRadio && comumRadio && personalizationSection) {
+        personalizadaRadio.addEventListener('change', () => {
+            personalizationSection.style.display = 'block';
+        });
+        
+        comumRadio.addEventListener('change', () => {
+            personalizationSection.style.display = 'none';
+        });
+    }
+    
+    // Fechar ao clicar fora
+    bookOptionsModal.addEventListener('click', function(e) {
+        if (e.target === bookOptionsModal) {
+            closeBookOptions();
+        }
+    });
+}
+
+function closeBookOptions() {
+    bookOptionsModal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function addToCartWithOptions(bookId) {
+    const book = books.find(b => b.id === bookId);
+    if (!book) return;
+    
+    const format = document.querySelector('input[name="format"]:checked')?.value || 
+                   (book.type === 'pdf' ? 'A4' : 'capa comum');
+    
+    let personalization = '';
+    if (format === 'capa personalizada') {
+        personalization = document.getElementById('childName')?.value.trim() || '';
+        if (!personalization) {
+            showNotification('Por favor, insira o nome da criança para personalização da capa.', 'error');
+            return;
+        }
+    }
+    
+    const quantity = book.type === 'pdf' ? 1 : parseInt(document.getElementById('quantitySelect')?.value || '1');
+    
+    // Verificar compatibilidade
     const hasPDFInCart = cart.some(item => item.type === 'pdf');
     const hasPhysicalInCart = cart.some(item => item.type === 'fisico');
     
@@ -341,15 +534,14 @@ function addToCart(bookId) {
         id: bookId,
         title: book.title,
         type: book.type,
-        quantity: 1,
+        format: format,
+        personalization: personalization,
+        quantity: quantity,
         price: book.price,
-        author: book.author,
-        color: book.color,
-        format: book.type === 'pdf' ? 'A4' : 'capa comum',
-        personalization: ''
+        author: book.author
     };
     
-    // Verificar se já existe no carrinho
+    // Verificar se já existe
     const existingIndex = cart.findIndex(item => 
         item.id === cartItem.id && 
         item.format === cartItem.format && 
@@ -357,22 +549,33 @@ function addToCart(bookId) {
     );
     
     if (existingIndex !== -1) {
-        cart[existingIndex].quantity += 1;
+        cart[existingIndex].quantity += cartItem.quantity;
     } else {
         cart.push(cartItem);
     }
     
-    // Registrar venda
-    registerSale(bookId, 1);
-    
-    // Atualizar carrinho
+    registerSale(bookId, quantity);
     updateCart();
     saveCartToStorage();
-    
-    // Feedback visual
+    closeBookOptions();
     showNotification('Livro adicionado ao carrinho!', 'success');
 }
 
+function getStarRating(rating) {
+    let stars = '';
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 0; i < fullStars; i++) stars += '<i class="fas fa-star"></i>';
+    if (hasHalfStar) stars += '<i class="fas fa-star-half-alt"></i>';
+    
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    for (let i = 0; i < emptyStars; i++) stars += '<i class="far fa-star"></i>';
+    
+    return stars;
+}
+
+// ========== FUNÇÕES DE CARRINHO ==========
 function updateCart() {
     cartCount = cart.reduce((total, item) => total + item.quantity, 0);
     updateCartCount();
@@ -387,6 +590,14 @@ function updateCartCount() {
         cartCountElement.textContent = cartCount;
         cartCountElement.style.display = cartCount > 0 ? 'flex' : 'none';
     }
+}
+
+function updateWishlistCount() {
+    const wishlistCountElements = document.querySelectorAll('.wishlist-count');
+    wishlistCountElements.forEach(element => {
+        element.textContent = wishlist.length;
+        element.style.display = wishlist.length > 0 ? 'flex' : 'none';
+    });
 }
 
 function renderCartItems() {
@@ -415,8 +626,8 @@ function renderCartItems() {
         const itemTotal = item.price * item.quantity;
         
         itemElement.innerHTML = `
-            <div class="cart-item-image ${item.type}" style="background: ${item.color}">
-                <i class="fas fa-book"></i>
+            <div class="cart-item-image ${item.type}">
+                <i class="fas fa-${item.type === 'pdf' ? 'file-pdf' : 'book'}"></i>
             </div>
             <div class="cart-item-details">
                 <div class="cart-item-title">${item.title}</div>
@@ -446,44 +657,44 @@ function renderCartItems() {
         cartItems.appendChild(itemElement);
     });
     
-    // Adicionar eventos
-    document.querySelectorAll('.quantity-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = parseInt(this.dataset.index);
-            const action = this.dataset.action;
-            const item = cart[index];
-            
-            if (item.type === 'pdf') return;
-            
-            if (action === 'decrease' && item.quantity > 1) {
-                cart[index].quantity--;
-            } else if (action === 'increase') {
-                cart[index].quantity++;
-            } else if (action === 'decrease' && item.quantity === 1) {
+    // Eventos
+    setTimeout(() => {
+        document.querySelectorAll('.quantity-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                const action = this.dataset.action;
+                const item = cart[index];
+                
+                if (item.type === 'pdf') return;
+                
+                if (action === 'decrease' && item.quantity > 1) {
+                    cart[index].quantity--;
+                } else if (action === 'increase') {
+                    cart[index].quantity++;
+                } else if (action === 'decrease' && item.quantity === 1) {
+                    cart.splice(index, 1);
+                }
+                
+                updateCart();
+                saveCartToStorage();
+            });
+        });
+        
+        document.querySelectorAll('.remove-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
                 cart.splice(index, 1);
-            }
-            
-            updateCart();
-            saveCartToStorage();
+                updateCart();
+                saveCartToStorage();
+            });
         });
-    });
-    
-    document.querySelectorAll('.remove-item').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = parseInt(this.dataset.index);
-            cart.splice(index, 1);
-            updateCart();
-            saveCartToStorage();
-        });
-    });
+    }, 100);
 }
 
 function updateCartSummary() {
     const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
     
     let shipping = 0;
-    
-    // PDFs não pagam frete
     const hasPDF = cart.some(item => item.type === 'pdf');
     const hasPhysical = cart.some(item => item.type === 'fisico');
     
@@ -530,7 +741,7 @@ function updateDeliverySection() {
     }
 }
 
-// ========== FUNÇÕES DE VENDAS E ESTATÍSTICAS ==========
+// ========== FUNÇÕES DE VENDAS ==========
 function registerSale(bookId, quantity) {
     if (!salesData[bookId]) {
         salesData[bookId] = {
@@ -543,7 +754,6 @@ function registerSale(bookId, quantity) {
     salesData[bookId].sales += quantity;
     salesData[bookId].rating = Math.min(5, salesData[bookId].rating + (Math.random() * 0.1));
     saveSalesData();
-    updateStats();
 }
 
 function registerView(bookId) {
@@ -557,48 +767,6 @@ function registerView(bookId) {
     
     salesData[bookId].views += 1;
     saveSalesData();
-}
-
-function updateStats() {
-    const totalBooksSold = Object.values(salesData).reduce((total, data) => total + data.sales, 0);
-    const totalViews = Object.values(salesData).reduce((total, data) => total + data.views, 0);
-    const happyCustomers = Math.floor(totalBooksSold * 0.9);
-    
-    // Animar números
-    animateCounter('booksSold', totalBooksSold);
-    animateCounter('totalViews', totalViews);
-    animateCounter('happyCustomers', happyCustomers);
-}
-
-function animateCounter(elementId, finalValue) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    
-    let current = 0;
-    const increment = finalValue / 50;
-    const timer = setInterval(() => {
-        current += increment;
-        if (current >= finalValue) {
-            current = finalValue;
-            clearInterval(timer);
-        }
-        element.textContent = Math.floor(current).toLocaleString();
-    }, 30);
-}
-
-function updateSectionTitle(filter) {
-    const sectionTitle = document.querySelector('.section-title');
-    if (!sectionTitle) return;
-    
-    const titles = {
-        'all': 'Nossa Coleção Encantadora',
-        'pdf': 'Livros em PDF para Imprimir',
-        'fisico': 'Livros Físicos Personalizados',
-        'populares': 'Livros Mais Populares',
-        'promocao': 'Livros em Promoção'
-    };
-    
-    sectionTitle.textContent = titles[filter] || titles['all'];
 }
 
 // ========== FUNÇÕES DE CHECKOUT ==========
@@ -618,8 +786,8 @@ function createOrderMessage() {
             return null;
         }
     } else if (hasPDF) {
-        if (!name || !email) {
-            showNotification('Para PDFs, preencha pelo menos nome e email.', 'error');
+        if (!name || !phone) { // Email NÃO é obrigatório
+            showNotification('Para PDFs, preencha pelo menos nome e telefone.', 'error');
             return null;
         }
     } else {
@@ -638,44 +806,36 @@ function createOrderMessage() {
         const itemTotal = item.price * item.quantity;
         message += `\n${index + 1}. ${item.title}\n`;
         message += `   Tipo: ${item.type === 'pdf' ? '📄 PDF' : '📖 Físico'}\n`;
+        message += `   Formato: ${item.format}\n`;
+        if (item.personalization) message += `   Personalização: ${item.personalization}\n`;
         message += `   Quantidade: ${item.quantity}\n`;
-        message += `   Preço unitário: ${item.price} MT\n`;
+        message += `   Preço: ${item.price} MT\n`;
         message += `   Subtotal: ${itemTotal} MT\n`;
-        if (item.personalization) {
-            message += `   Personalização: ${item.personalization}\n`;
-        }
     });
     
     const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-    
     let shipping = 0;
+    
     if (hasPhysical && !hasPDF) {
         const hasFreeDelivery = freeDeliveryZones.some(zone => 
             address.toLowerCase().includes(zone.toLowerCase())
         );
-        
-        if (!hasFreeDelivery) {
-            shipping = deliveryFee;
-        }
+        if (!hasFreeDelivery) shipping = deliveryFee;
     }
     
     const total = subtotal + shipping;
     
-    message += `\n*RESUMO DO PEDIDO:*\n`;
+    message += `\n*RESUMO:*\n`;
     message += `Subtotal: ${subtotal} MT\n`;
     message += `Frete: ${shipping} MT\n`;
     message += `*TOTAL: ${total} MT*\n\n`;
     
     if (hasPDF) {
-        message += `📥 Os PDFs serão enviados para: ${email}\n`;
+        message += `📥 PDFs serão enviados para o email informado ou por WhatsApp.\n`;
     }
+    message += `⏰ Pedido feito em: ${new Date().toLocaleString('pt-PT')}`;
     
-    message += `⏰ *Horário do pedido:* ${new Date().toLocaleString('pt-PT')}`;
-    
-    return {
-        message: message,
-        total: total
-    };
+    return { message, total };
 }
 
 function finalizeOrderWhatsApp() {
@@ -689,7 +849,6 @@ function finalizeOrderWhatsApp() {
     window.open(whatsappURL, '_blank');
     showNotification('Abrindo WhatsApp...', 'success');
     
-    // Limpar carrinho após finalização
     cart = [];
     updateCart();
     saveCartToStorage();
@@ -799,8 +958,38 @@ function getCurrentLocation() {
     );
 }
 
+// ========== PESQUISA ==========
+function performSearch() {
+    const query = searchInput.value.trim();
+    if (query) {
+        renderBooks(currentFilter, query);
+    } else {
+        renderBooks(currentFilter);
+    }
+}
+
 // ========== EVENT LISTENERS ==========
 function setupEventListeners() {
+    // Menu mobile
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') 
+                ? '<i class="fas fa-times"></i>' 
+                : '<i class="fas fa-bars"></i>';
+        });
+    }
+    
+    // Fechar menu ao clicar em link
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.addEventListener('click', () => {
+            navLinks.classList.remove('active');
+            if (mobileMenuBtn) {
+                mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        });
+    });
+    
     // Carrinho
     if (cartIcon) {
         cartIcon.addEventListener('click', () => {
@@ -825,45 +1014,62 @@ function setupEventListeners() {
         });
     }
     
+    // Lista de desejos
+    if (wishlistIcon) {
+        wishlistIcon.addEventListener('click', () => {
+            wishlistOverlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        });
+    }
+    
+    if (closeWishlist) {
+        closeWishlist.addEventListener('click', () => {
+            wishlistOverlay.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        });
+    }
+    
+    if (wishlistOverlay) {
+        wishlistOverlay.addEventListener('click', (e) => {
+            if (e.target === wishlistOverlay) {
+                wishlistOverlay.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        });
+    }
+    
+    if (clearWishlistBtn) {
+        clearWishlistBtn.addEventListener('click', clearWishlist);
+    }
+    
     // Filtros
     filterBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             filterBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             const filter = this.dataset.filter;
-            renderBooks(filter, currentSort);
+            renderBooks(filter, searchInput.value);
         });
     });
     
-    // Botões de ordenação
-    sortBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            sortBtns.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            const sortBy = this.dataset.sort;
-            renderBestsellers(sortBy);
+    // Pesquisa
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            if (this.value.trim() === '') {
+                renderBooks(currentFilter);
+            }
         });
-    });
-    
-    // Menu mobile
-    if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') 
-                ? '<i class="fas fa-times"></i>' 
-                : '<i class="fas fa-bars"></i>';
+        
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
         });
     }
     
-    // Fechar menu ao clicar em link
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.addEventListener('click', () => {
-            navLinks.classList.remove('active');
-            if (mobileMenuBtn) {
-                mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
-            }
-        });
-    });
+    if (searchBtn) {
+        searchBtn.addEventListener('click', performSearch);
+    }
     
     // Localização
     if (getLocationBtn) {
@@ -874,15 +1080,7 @@ function setupEventListeners() {
         deliveryAddress.addEventListener('input', updateCartSummary);
     }
     
-    // Campos de cliente
-    ['customerName', 'customerPhone', 'customerEmail'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('input', updateCartSummary);
-        }
-    });
-    
-    // Finalizar compra
+    // Checkout
     if (whatsappBtn) {
         whatsappBtn.addEventListener('click', finalizeOrderWhatsApp);
     }
@@ -895,17 +1093,16 @@ function setupEventListeners() {
         emailBtn.addEventListener('click', finalizeOrderEmail);
     }
     
+    // Campos de cliente
+    ['customerName', 'customerPhone', 'customerEmail'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateCartSummary);
+        }
+    });
+    
     // Event delegation para livros dinâmicos
     document.addEventListener('click', function(e) {
-        // Botão adicionar ao carrinho
-        if (e.target.closest('.add-to-cart')) {
-            const btn = e.target.closest('.add-to-cart');
-            if (!btn.classList.contains('confirm-add')) {
-                const bookId = parseInt(btn.dataset.id);
-                addToCart(bookId);
-            }
-        }
-        
         // Botão lista de desejos
         if (e.target.closest('.wishlist-btn')) {
             const btn = e.target.closest('.wishlist-btn');
@@ -914,13 +1111,16 @@ function setupEventListeners() {
             
             if (wasAdded) {
                 btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-heart"></i>';
-                showNotification('Livro adicionado à lista de desejos!', 'success');
             } else {
                 btn.classList.remove('active');
-                btn.innerHTML = '<i class="fas fa-heart"></i>';
-                showNotification('Livro removido da lista de desejos', 'info');
             }
+        }
+        
+        // Botão adicionar ao carrinho
+        if (e.target.closest('.add-to-cart')) {
+            const btn = e.target.closest('.add-to-cart');
+            const bookId = parseInt(btn.dataset.id);
+            showBookOptions(bookId);
         }
         
         // Botão visualização rápida
@@ -932,86 +1132,69 @@ function setupEventListeners() {
     });
 }
 
+// ========== VISUALIZAÇÃO RÁPIDA ==========
 function showQuickView(bookId) {
     const book = books.find(b => b.id === bookId);
     if (!book) return;
     
-    const bookSales = salesData[bookId]?.sales || 0;
-    const bookRating = salesData[bookId]?.rating || 4.0;
-    const inWishlist = isInWishlist(bookId);
-    const bookImage = bookImages[bookId] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80';
+    const bookSales = salesData[book.id]?.sales || 0;
+    const bookRating = salesData[book.id]?.rating || 4.0;
+    const inWishlist = isInWishlist(book.id);
+    const bookImage = bookImages[book.id] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80';
     
     const modalHTML = `
-        <div class="book-modal-overlay" id="quickViewModal">
-            <div class="book-modal">
-                <button class="modal-close" id="closeModal">&times;</button>
-                <div class="modal-content">
-                    <div class="modal-image-container">
-                        <img src="${bookImage}" alt="${book.title}" class="modal-image">
-                        <div class="book-badges">
-                            <div class="book-badge badge-${book.type}">
-                                <i class="fas fa-${book.type === 'pdf' ? 'file-pdf' : 'book'}"></i>
-                                ${book.type === 'pdf' ? 'PDF' : 'Livro Físico'}
-                            </div>
-                            ${bookSales > 30 ? `
-                                <div class="book-badge badge-bestseller">
-                                    <i class="fas fa-crown"></i> Mais Vendido
-                                </div>
-                            ` : ''}
-                            ${book.promotion ? `
-                                <div class="book-badge badge-promo">
-                                    <i class="fas fa-tag"></i> Promoção
-                                </div>
-                            ` : ''}
-                        </div>
+        <div class="quick-view-overlay" id="quickViewModal">
+            <div class="quick-view-modal">
+                <button class="modal-close" id="closeQuickView">&times;</button>
+                <div class="quick-view-content">
+                    <div class="quick-view-image">
+                        <img src="${bookImage}" alt="${book.title}">
                     </div>
-                    
-                    <div class="modal-details">
-                        <h2 class="modal-title">${book.title}</h2>
-                        <p class="modal-author">por ${book.author}</p>
+                    <div class="quick-view-details">
+                        <h2>${book.title}</h2>
+                        <p class="author">por ${book.author}</p>
                         
-                        <div class="book-rating" style="margin-bottom: 20px;">
+                        <div class="rating-section">
                             <div class="stars">
                                 ${getStarRating(bookRating)}
                             </div>
-                            <span class="rating-count">${bookSales} vendas • ${bookRating.toFixed(1)}/5.0</span>
+                            <span>${bookSales} vendas • ${bookRating.toFixed(1)}/5.0</span>
                         </div>
                         
-                        <p class="modal-description">${book.description}</p>
+                        <p class="description">${book.description}</p>
                         
-                        <div class="modal-meta-grid">
-                            <div class="modal-meta-item">
-                                <span class="modal-meta-label">Páginas</span>
-                                <span class="modal-meta-value">${book.pages} páginas</span>
+                        <div class="details-grid">
+                            <div class="detail">
+                                <i class="fas fa-file"></i>
+                                <span>${book.pages} páginas</span>
                             </div>
-                            <div class="modal-meta-item">
-                                <span class="modal-meta-label">Idioma</span>
-                                <span class="modal-meta-value">${book.language}</span>
+                            <div class="detail">
+                                <i class="fas fa-language"></i>
+                                <span>${book.language}</span>
                             </div>
-                            <div class="modal-meta-item">
-                                <span class="modal-meta-label">Categoria</span>
-                                <span class="modal-meta-value">${book.category}</span>
+                            <div class="detail">
+                                <i class="fas fa-tag"></i>
+                                <span>${book.category}</span>
                             </div>
-                            <div class="modal-meta-item">
-                                <span class="modal-meta-label">Formato</span>
-                                <span class="modal-meta-value">${book.type === 'pdf' ? 'Digital (PDF)' : 'Físico'}</span>
+                            <div class="detail">
+                                <i class="fas fa-${book.type === 'pdf' ? 'file-pdf' : 'book'}"></i>
+                                <span>${book.type === 'pdf' ? 'PDF Digital' : 'Livro Físico'}</span>
                             </div>
                         </div>
                         
-                        <div class="modal-price">${book.price} MT</div>
+                        <div class="price-section">
+                            <span class="price">${book.price} MT</span>
+                            ${book.type === 'pdf' ? 
+                                `<span class="pdf-note"><i class="fas fa-download"></i> Download instantâneo</span>` 
+                                : ''}
+                        </div>
                         
-                        ${book.type === 'pdf' ? 
-                            `<p class="pdf-note" style="margin-bottom: 20px;">
-                                <i class="fas fa-download"></i> Download instantâneo - Sem frete
-                            </p>` 
-                            : ''}
-                        
-                        <div class="modal-actions">
-                            <button class="modal-add-to-cart" data-id="${bookId}">
-                                <i class="fas fa-cart-plus"></i> Adicionar ao Carrinho
+                        <div class="quick-view-actions">
+                            <button class="wishlist-btn ${inWishlist ? 'active' : ''}" data-id="${bookId}">
+                                <i class="fas fa-heart"></i> ${inWishlist ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos'}
                             </button>
-                            <button class="modal-wishlist-btn ${inWishlist ? 'active' : ''}" data-id="${bookId}">
-                                <i class="fas fa-heart"></i> ${inWishlist ? 'Na Lista' : 'Lista de Desejos'}
+                            <button class="cta-button primary-btn buy-now" data-id="${bookId}">
+                                <i class="fas fa-cart-plus"></i> Comprar Agora
                             </button>
                         </div>
                     </div>
@@ -1026,68 +1209,42 @@ function showQuickView(bookId) {
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     
-    const closeBtn = document.getElementById('closeModal');
-    closeBtn.addEventListener('click', closeQuickView);
+    // Eventos do modal
+    document.getElementById('closeQuickView').addEventListener('click', () => {
+        modal.remove();
+        document.body.style.overflow = 'auto';
+    });
     
     modal.addEventListener('click', function(e) {
         if (e.target === modal) {
-            closeQuickView();
-        }
-    });
-    
-    const wishlistBtn = document.querySelector('.modal-wishlist-btn');
-    wishlistBtn.addEventListener('click', function() {
-        const bookId = parseInt(this.dataset.id);
-        const wasAdded = toggleWishlist(bookId);
-        
-        if (wasAdded) {
-            this.classList.add('active');
-            this.innerHTML = '<i class="fas fa-heart"></i> Na Lista';
-            showNotification('Adicionado à lista de desejos!', 'success');
-        } else {
-            this.classList.remove('active');
-            this.innerHTML = '<i class="fas fa-heart"></i> Lista de Desejos';
-            showNotification('Removido da lista de desejos', 'info');
-        }
-    });
-    
-    const addToCartBtn = document.querySelector('.modal-add-to-cart');
-    addToCartBtn.addEventListener('click', function() {
-        const bookId = parseInt(this.dataset.id);
-        closeQuickView();
-        addToCart(bookId);
-    });
-}
-
-function closeQuickView() {
-    const modal = document.getElementById('quickViewModal');
-    if (modal) {
-        modal.style.animation = 'modalOut 0.3s ease-out';
-        setTimeout(() => {
             modal.remove();
             document.body.style.overflow = 'auto';
-        }, 300);
-    }
+        }
+    });
+    
+    // Botões dentro do modal
+    setTimeout(() => {
+        modal.querySelector('.wishlist-btn').addEventListener('click', function() {
+            const bookId = parseInt(this.dataset.id);
+            const wasAdded = toggleWishlist(bookId);
+            
+            if (wasAdded) {
+                this.classList.add('active');
+                this.innerHTML = '<i class="fas fa-heart"></i> Remover dos Favoritos';
+            } else {
+                this.classList.remove('active');
+                this.innerHTML = '<i class="fas fa-heart"></i> Adicionar aos Favoritos';
+            }
+        });
+        
+        modal.querySelector('.buy-now').addEventListener('click', function() {
+            const bookId = parseInt(this.dataset.id);
+            modal.remove();
+            document.body.style.overflow = 'auto';
+            showBookOptions(bookId);
+        });
+    }, 100);
 }
 
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', initializeApp);
-
-// Adicionar animações CSS
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fadeOut {
-        from { opacity: 1; transform: translateX(0); }
-        to { opacity: 0; transform: translateX(100px); }
-    }
-    
-    @keyframes modalOut {
-        from { opacity: 1; transform: scale(1); }
-        to { opacity: 0; transform: scale(0.9); }
-    }
-    
-    .badge-rank {
-        background: linear-gradient(45deg, #FFD700, #FFA500);
-    }
-`;
-document.head.appendChild(style);
